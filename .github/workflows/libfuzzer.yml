@@ -13,6 +13,9 @@ jobs:
     uses: ./.github/workflows/reusable_build.yml
     with:
       build_name: fuzzers
+      #FIXME:
+      s3_report_path: "lala"
+      builder_tag: "123456"
   libFuzzerTest:
     needs: [BuilderFuzzers]
     uses: ./.github/workflows/reusable_test.yml

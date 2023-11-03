@@ -88,3 +88,19 @@ def get_image_with_version(
 ) -> DockerImage:
     logging.info("Looking for images file in %s", reports_path)
     return get_images_with_versions(reports_path, [image], pull, version=version)[0]
+
+
+def pull_image(image: str, tag: Optional[str] = None) -> DockerImage:
+    try:
+        tag = tag or "latest"
+        image_tag = f"{image}:{tag}"
+        logging.info("Pulling image %s - start", image_tag)
+        subprocess.check_output(
+            f"docker pull {image_tag}",
+            stderr=subprocess.STDOUT,
+            shell=True,
+        )
+        logging.info("Pulling image %s - done", image_tag)
+    except Exception as ex:
+        logging.info("Got execption pulling docker %s", ex)
+    return DockerImage(image, tag)

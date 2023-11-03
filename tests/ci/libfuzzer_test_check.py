@@ -20,9 +20,9 @@ from commit_status_helper import (
     get_commit,
     update_mergeable_check,
 )
-from docker_pull_helper import DockerImage, get_image_with_version
+from docker_pull_helper import DockerImage, pull_image
 
-from env_helper import TEMP_PATH, REPO_COPY, REPORTS_PATH
+from env_helper import TEMP_PATH, REPO_COPY, DOCKER_TAG
 from get_robot_token import get_best_robot_token
 from pr_info import PRInfo
 from report import TestResults
@@ -98,6 +98,12 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("check_name")
     parser.add_argument("kill_timeout", type=int)
+    parser.add_argument(
+        "--tag",
+        required=False,
+        default="",
+        help="tag for docker image",
+    )
     return parser.parse_args()
 
 
@@ -108,7 +114,7 @@ def main():
 
     temp_path = Path(TEMP_PATH)
     repo_path = Path(REPO_COPY)
-    reports_path = REPORTS_PATH
+    reports_path = temp_path
 
     args = parse_args()
     check_name = args.check_name
@@ -137,7 +143,11 @@ def main():
         logging.info("Check is already finished according to github status, exiting")
         sys.exit(0)
 
-    docker_image = get_image_with_version(reports_path, "clickhouse/libfuzzer")
+    assert (
+        args.tag or DOCKER_TAG
+    ), "docker image tag must be provided either with --tag option or DOCKER_TAG env"
+    image_version = args.tag or DOCKER_TAG
+    docker_image = pull_image("clickhouse/libfuzzer", image_version)
 
     fuzzers_path = temp_path / "fuzzers"
     fuzzers_path.mkdir(parents=True, exist_ok=True)

@@ -13,7 +13,6 @@ from env_helper import (
     GITHUB_JOB_URL,
     GITHUB_REPOSITORY,
     GITHUB_SERVER_URL,
-    REPORTS_PATH,
     TEMP_PATH,
 )
 from report import (
@@ -48,8 +47,8 @@ def main():
     temp_path = Path(TEMP_PATH)
     temp_path.mkdir(parents=True, exist_ok=True)
 
-    logging.info("Reports path %s", REPORTS_PATH)
-    reports_path = Path(REPORTS_PATH)
+    logging.info("Reports path %s", TEMP_PATH)
+    reports_path = Path(TEMP_PATH)
     logging.info(
         "Reports found:\n %s",
         "\n ".join(p.as_posix() for p in reports_path.rglob("*.json")),
