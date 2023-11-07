@@ -24,6 +24,7 @@
 #include <Storages/SelectQueryInfo.h>
 #include <Storages/StorageConfiguration.h>
 #include <Storages/prepareReadingFromFormat.h>
+#include <IO/S3/BlobStorageLogWriter.h>
 
 namespace Aws::S3
 {
@@ -386,6 +387,8 @@ protected:
     void useConfiguration(const Configuration & new_configuration);
 
     const Configuration & getConfiguration();
+
+    BlobStorageLogWriter getBlobStorageLog();
 
 private:
     friend class StorageS3Cluster;

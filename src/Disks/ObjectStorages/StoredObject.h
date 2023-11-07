@@ -21,6 +21,13 @@ struct StoredObject
 
     StoredObject() = default;
 
+    StoredObject(
+        const std::string & remote_path_,
+        const std::string & local_path_)
+        : remote_path(remote_path_)
+        , local_path(local_path_)
+    {}
+
     explicit StoredObject(String remote_path_)
         : remote_path(std::move(remote_path_))
     {}

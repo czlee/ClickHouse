@@ -147,13 +147,15 @@ void KeeperSnapshotManagerS3::uploadSnapshotImpl(const SnapshotFileInfo & snapsh
 
         const auto create_writer = [&](const auto & key)
         {
+            /// blob_storage_log is not used for keeper
             return WriteBufferFromS3(
                 s3_client->client,
                 s3_client->client,
                 s3_client->uri.bucket,
                 key,
                 DBMS_DEFAULT_BUFFER_SIZE,
-                request_settings_1
+                request_settings_1,
+                /* blob_log */ {}
             );
         };
 
@@ -215,6 +217,7 @@ void KeeperSnapshotManagerS3::uploadSnapshotImpl(const SnapshotFileInfo & snapsh
                 delete_request.SetBucket(s3_client->uri.bucket);
                 delete_request.SetKey(lock_file);
                 auto delete_outcome = s3_client->client->DeleteObject(delete_request);
+
                 if (!delete_outcome.IsSuccess())
                     throw S3Exception(delete_outcome.GetError().GetMessage(), delete_outcome.GetError().GetErrorType());
             }

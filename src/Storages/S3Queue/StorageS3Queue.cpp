@@ -239,11 +239,16 @@ std::shared_ptr<StorageS3QueueSource> StorageS3Queue::createSource(
         configuration_snapshot.url.uri.getHost() + std::to_string(configuration_snapshot.url.uri.getPort()),
         file_iterator, local_context->getSettingsRef().max_download_threads, false, /* query_info */ std::nullopt);
 
-    auto file_deleter = [this, bucket = configuration_snapshot.url.bucket, client = configuration_snapshot.client](const std::string & path)
+    auto blob_storage_log = getBlobStorageLog();
+    auto file_deleter = [this, bucket = configuration_snapshot.url.bucket, client = configuration_snapshot.client, blob_storage_log](const std::string & path) mutable
     {
         S3::DeleteObjectRequest request;
         request.WithKey(path).WithBucket(bucket);
         auto outcome = client->DeleteObject(request);
+        blob_storage_log.addEvent(
+            BlobStorageLogElement::EventType::Delete,
+            bucket, path, {}, 0, outcome.IsSuccess() ? nullptr : &outcome.GetError());
+
         if (!outcome.IsSuccess())
         {
             const auto & err = outcome.GetError();
@@ -464,6 +469,15 @@ std::shared_ptr<StorageS3Queue::FileIterator> StorageS3Queue::createFileIterator
         *configuration.client, configuration.url, query, virtual_columns, local_context,
         /* read_keys */nullptr, configuration.request_settings);
     return std::make_shared<FileIterator>(files_metadata, std::move(glob_iterator), shutdown_called);
+}
+
+BlobStorageLogWriter StorageS3Queue::getBlobStorageLog()
+{
+    BlobStorageLogWriter blob_storage_log(Context::getGlobalContextInstance()->getBlobStorageLog());
+    if (CurrentThread::isInitialized() && CurrentThread::get().getQueryContext())
+        blob_storage_log.query_id = CurrentThread::getQueryId();
+
+    return blob_storage_log;
 }
 
 void registerStorageS3QueueImpl(const String & name, StorageFactory & factory)
