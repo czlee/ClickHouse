@@ -33,14 +33,15 @@ NamesAndTypesList BlobStorageLogElement::getNamesAndTypes()
 
         {"query_id", std::make_shared<DataTypeString>()},
         {"thread_id", std::make_shared<DataTypeUInt64>()},
+        {"thread_name", std::make_shared<DataTypeString>()},
 
         {"disk_name", std::make_shared<DataTypeLowCardinality>(std::make_shared<DataTypeString>())},
         {"bucket", std::make_shared<DataTypeString>()},
         {"remote_path", std::make_shared<DataTypeString>()},
         {"local_path", std::make_shared<DataTypeString>()},
-        {"data_size", std::make_shared<DataTypeUInt32>()},
+        {"data_size", std::make_shared<DataTypeUInt64>()},
 
-        {"error_msg", std::make_shared<DataTypeString>()},
+        {"error", std::make_shared<DataTypeString>()},
     };
 }
 
@@ -67,6 +68,8 @@ void BlobStorageLogElement::appendToBlock(MutableColumns & columns) const
     columns[i++]->insert(query_id);
     assert(coulumn_names.at(i) == "thread_id");
     columns[i++]->insert(thread_id);
+    assert(coulumn_names.at(i) == "thread_name");
+    columns[i++]->insert(thread_name);
 
     assert(coulumn_names.at(i) == "disk_name");
     columns[i++]->insert(disk_name);

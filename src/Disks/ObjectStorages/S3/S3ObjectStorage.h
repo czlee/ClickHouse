@@ -9,7 +9,6 @@
 #include <memory>
 #include <Storages/StorageS3Settings.h>
 #include <Common/MultiVersion.h>
-#include <IO/S3/BlobStorageLogWriter.h>
 
 
 namespace DB
@@ -182,8 +181,6 @@ private:
 
     void removeObjectImpl(const StoredObject & object, bool if_exists);
     void removeObjectsImpl(const StoredObjects & objects, bool if_exists);
-
-    BlobStorageLogWriter getBlobStorageLog();
 
 private:
     std::string bucket;

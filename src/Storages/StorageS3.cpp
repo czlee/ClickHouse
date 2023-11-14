@@ -710,7 +710,7 @@ std::unique_ptr<ReadBuffer> StorageS3Source::createAsyncS3ReadBuffer(
 
     auto s3_impl = std::make_unique<ReadBufferFromRemoteFSGather>(
         std::move(read_buffer_creator),
-        StoredObjects{StoredObject{key, object_size}},
+        StoredObjects{StoredObject{key, /* local_path */ "", object_size}},
         read_settings,
         /* cache_log */nullptr, /* use_external_buffer */true);
 
@@ -821,8 +821,12 @@ public:
         , sample_block(sample_block_)
         , format_settings(format_settings_)
     {
-        BlobStorageLogWriter blob_log(context->getBlobStorageLog());
-        blob_log.query_id = context->getCurrentQueryId();
+        BlobStorageLogWriterPtr blob_log = nullptr;
+        if (auto blob_storage_log = context->getBlobStorageLog())
+        {
+            blob_log = std::make_shared<BlobStorageLogWriter>(std::move(blob_storage_log));
+            blob_log->query_id = context->getCurrentQueryId();
+        }
 
         write_buf = wrapWriteBufferWithCompressionMethod(
             std::make_unique<WriteBufferFromS3>(
@@ -1248,9 +1252,11 @@ void StorageS3::truncate(const ASTPtr & /* query */, const StorageMetadataPtr &,
 
     const auto * response_error = response.IsSuccess() ? nullptr : &response.GetError();
     auto time_now = std::chrono::system_clock::now();
-    auto blob_storage_log = getBlobStorageLog();
-    for (const auto & key : query_configuration.keys)
-        blob_storage_log.addEvent(BlobStorageLogElement::EventType::Delete, query_configuration.url.bucket, key, {}, 0, response_error, time_now);
+    if (auto blob_storage_log = BlobStorageLogWriter::create())
+    {
+        for (const auto & key : query_configuration.keys)
+            blob_storage_log->addEvent(BlobStorageLogElement::EventType::Delete, query_configuration.url.bucket, key, {}, 0, response_error, time_now);
+    }
 
     if (!response.IsSuccess())
     {
@@ -1768,16 +1774,6 @@ void StorageS3::addColumnsToCache(
     auto cache_keys = getKeysForSchemaCache(sources, format_name, format_settings, ctx);
     auto & schema_cache = getSchemaCache(ctx);
     schema_cache.addManyColumns(cache_keys, columns);
-}
-
-BlobStorageLogWriter StorageS3::getBlobStorageLog()
-{
-    /// Make a copy with local properties like query_id, object path, etc
-    BlobStorageLogWriter blob_storage_log(Context::getGlobalContextInstance()->getBlobStorageLog());
-    if (CurrentThread::isInitialized() && CurrentThread::get().getQueryContext())
-        blob_storage_log.query_id = CurrentThread::getQueryId();
-
-    return blob_storage_log;
 }
 
 }

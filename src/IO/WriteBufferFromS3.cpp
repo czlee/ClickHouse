@@ -82,7 +82,7 @@ WriteBufferFromS3::WriteBufferFromS3(
     const String & key_,
     size_t buf_size_,
     const S3Settings::RequestSettings & request_settings_,
-    BlobStorageLogWriter blob_log_,
+    BlobStorageLogWriterPtr blob_log_,
     std::optional<std::map<String, String>> object_metadata_,
     ThreadPoolCallbackRunner<void> schedule_,
     const WriteSettings & write_settings_)
@@ -101,7 +101,7 @@ WriteBufferFromS3::WriteBufferFromS3(
               std::move(schedule_),
               upload_settings.max_inflight_parts_for_one_file,
               limitedLog))
-    , blob_log(blob_log_)
+    , blob_log(std::move(blob_log_))
 {
     LOG_TRACE(limitedLog, "Create WriteBufferFromS3, {}", getShortLogDetails());
 
@@ -382,8 +382,9 @@ void WriteBufferFromS3::createMultipartUpload()
     watch.stop();
 
     ProfileEvents::increment(ProfileEvents::WriteBufferFromS3Microseconds, watch.elapsedMicroseconds());
-    blob_log.addEvent(BlobStorageLogElement::EventType::MultiPartUploadCreate, bucket, key, {}, 0,
-                      outcome.IsSuccess() ? nullptr : &outcome.GetError());
+    if (blob_log)
+        blob_log->addEvent(BlobStorageLogElement::EventType::MultiPartUploadCreate, bucket, key, {}, 0,
+                           outcome.IsSuccess() ? nullptr : &outcome.GetError());
 
     if (!outcome.IsSuccess())
     {
@@ -421,8 +422,9 @@ void WriteBufferFromS3::abortMultipartUpload()
 
     ProfileEvents::increment(ProfileEvents::WriteBufferFromS3Microseconds, watch.elapsedMicroseconds());
 
-    blob_log.addEvent(BlobStorageLogElement::EventType::MultiPartUploadAbort, bucket, key, {}, 0,
-                      outcome.IsSuccess() ? nullptr : &outcome.GetError());
+    if (blob_log)
+        blob_log->addEvent(BlobStorageLogElement::EventType::MultiPartUploadAbort, bucket, key, {}, 0,
+                           outcome.IsSuccess() ? nullptr : &outcome.GetError());
 
     if (!outcome.IsSuccess())
     {
@@ -518,12 +520,12 @@ void WriteBufferFromS3::writePart(WriteBufferFromS3::PartData && data)
 
         ProfileEvents::increment(ProfileEvents::WriteBufferFromS3Microseconds, watch.elapsedMicroseconds());
 
-        blob_log.addEvent(BlobStorageLogElement::EventType::MultiPartUploadWrite,
-            /* bucket = */ bucket,
-            /* remote_path = */ key,
-            /* local_path = */ {},
-            /* data_size */ data_size,
-            outcome.IsSuccess() ? nullptr : &outcome.GetError());
+        if (blob_log)
+        {
+            blob_log->addEvent(BlobStorageLogElement::EventType::MultiPartUploadWrite,
+                /* bucket = */ bucket, /* remote_path = */ key, /* local_path = */ {}, /* data_size */ data_size,
+                outcome.IsSuccess() ? nullptr : &outcome.GetError());
+        }
 
         if (!outcome.IsSuccess())
         {
@@ -586,8 +588,10 @@ void WriteBufferFromS3::completeMultipartUpload()
 
         ProfileEvents::increment(ProfileEvents::WriteBufferFromS3Microseconds, watch.elapsedMicroseconds());
 
-        blob_log.addEvent(BlobStorageLogElement::EventType::MultiPartUploadComplete, bucket, key, {}, 0,
-                          outcome.IsSuccess() ? nullptr : &outcome.GetError());
+        if (blob_log)
+            blob_log->addEvent(BlobStorageLogElement::EventType::MultiPartUploadComplete, bucket, key, {}, 0,
+                               outcome.IsSuccess() ? nullptr : &outcome.GetError());
+
         if (outcome.IsSuccess())
         {
             LOG_TRACE(limitedLog, "Multipart upload has completed. {}, Parts: {}", getShortLogDetails(), multipart_tags.size());
@@ -669,8 +673,9 @@ void WriteBufferFromS3::makeSinglepartUpload(WriteBufferFromS3::PartData && data
             rlock.unlock();
 
             ProfileEvents::increment(ProfileEvents::WriteBufferFromS3Microseconds, watch.elapsedMicroseconds());
-            blob_log.addEvent(BlobStorageLogElement::EventType::Upload, bucket, key, {}, request.GetContentLength(),
-                              outcome.IsSuccess() ? nullptr : &outcome.GetError());
+            if (blob_log)
+                blob_log->addEvent(BlobStorageLogElement::EventType::Upload, bucket, key, {}, request.GetContentLength(),
+                                   outcome.IsSuccess() ? nullptr : &outcome.GetError());
 
             if (outcome.IsSuccess())
             {

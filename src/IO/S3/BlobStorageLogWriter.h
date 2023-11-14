@@ -16,9 +16,12 @@ namespace DB
 
 using BlobStorageLogPtr = std::shared_ptr<BlobStorageLog>;
 
+class BlobStorageLogWriter;
+using BlobStorageLogWriterPtr = std::shared_ptr<BlobStorageLogWriter>;
+
 /// Helper class tp write events to BlobStorageLog
 /// Can additionally hold some context information
-class BlobStorageLogWriter
+class BlobStorageLogWriter : private boost::noncopyable
 {
 public:
     BlobStorageLogWriter() = default;
@@ -42,6 +45,8 @@ public:
     String disk_name;
     String query_id;
     String local_path;
+
+    static BlobStorageLogWriterPtr create(const String & disk_name = "");
 
 private:
     BlobStorageLogPtr log;

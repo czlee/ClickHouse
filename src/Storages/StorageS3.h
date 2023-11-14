@@ -388,8 +388,6 @@ protected:
 
     const Configuration & getConfiguration();
 
-    BlobStorageLogWriter getBlobStorageLog();
-
 private:
     friend class StorageS3Cluster;
     friend class TableFunctionS3Cluster;

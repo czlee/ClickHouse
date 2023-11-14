@@ -3,7 +3,9 @@
 #if USE_AWS_S3
 
 #include <base/getThreadId.h>
+#include <Common/setThreadName.h>
 #include <IO/S3/Client.h>
+#include <Interpreters/Context.h>
 
 namespace DB
 {
@@ -17,7 +19,6 @@ void BlobStorageLogWriter::addEvent(
     const Aws::S3::S3Error * error,
     BlobStorageLogElement::EvenTime time_now)
 {
-
     if (!log)
         return;
 
@@ -30,16 +31,13 @@ void BlobStorageLogWriter::addEvent(
 
     element.query_id = query_id;
     element.thread_id = getThreadId();
+    element.thread_name = getThreadName();
 
     element.disk_name = disk_name;
     element.bucket = bucket;
     element.remote_path = remote_path;
     element.local_path = local_path_.empty() ? local_path : local_path_;
-
-    if (data_size > std::numeric_limits<decltype(element.data_size)>::max())
-        element.data_size = std::numeric_limits<decltype(element.data_size)>::max();
-    else
-        element.data_size = static_cast<decltype(element.data_size)>(data_size);
+    element.data_size = data_size;
 
     if (error)
     {
@@ -50,6 +48,23 @@ void BlobStorageLogWriter::addEvent(
     element.event_time = time_now;
 
     log->add(element);
+}
+
+BlobStorageLogWriterPtr BlobStorageLogWriter::create(const String & disk_name)
+{
+#ifndef CLICKHOUSE_KEEPER_STANDALONE_BUILD /// Keeper standalone build doesn't have a context
+    if (auto blob_storage_log = Context::getGlobalContextInstance()->getBlobStorageLog())
+    {
+        auto log_writer = std::make_shared<BlobStorageLogWriter>(std::move(blob_storage_log));
+
+        log_writer->disk_name = disk_name;
+        if (CurrentThread::isInitialized() && CurrentThread::get().getQueryContext())
+            log_writer->query_id = CurrentThread::getQueryId();
+
+        return log_writer;
+    }
+#endif
+    return {};
 }
 
 }

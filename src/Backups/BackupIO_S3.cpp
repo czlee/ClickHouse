@@ -119,13 +119,15 @@ BackupReaderS3::BackupReaderS3(
     , s3_uri(s3_uri_)
     , data_source_description{DataSourceType::S3, s3_uri.endpoint, false, false}
     , s3_settings(context_->getStorageS3Settings().getSettings(s3_uri.uri.toString()))
-    , blob_storage_log(BlobStorageLogWriter(context_->getBlobStorageLog()))
 {
     auto & request_settings = s3_settings.request_settings;
     request_settings.updateFromSettings(context_->getSettingsRef());
     request_settings.max_single_read_retries = context_->getSettingsRef().s3_max_single_read_retries; // FIXME: Avoid taking value for endpoint
     request_settings.allow_native_copy = allow_s3_native_copy;
     client = makeS3Client(s3_uri_, access_key_id_, secret_access_key_, s3_settings, context_);
+
+    if (auto blob_storage_system_log = context_->getBlobStorageLog())
+        blob_storage_log = std::make_shared<BlobStorageLogWriter>(blob_storage_system_log);
 }
 
 BackupReaderS3::~BackupReaderS3() = default;
@@ -208,7 +210,6 @@ BackupWriterS3::BackupWriterS3(
     , s3_uri(s3_uri_)
     , data_source_description{DataSourceType::S3, s3_uri.endpoint, false, false}
     , s3_settings(context_->getStorageS3Settings().getSettings(s3_uri.uri.toString()))
-    , blob_storage_log(BlobStorageLogWriter(context_->getBlobStorageLog()))
 {
     auto & request_settings = s3_settings.request_settings;
     request_settings.updateFromSettings(context_->getSettingsRef());
@@ -216,8 +217,12 @@ BackupWriterS3::BackupWriterS3(
     request_settings.allow_native_copy = allow_s3_native_copy;
     request_settings.setStorageClassName(storage_class_name);
     client = makeS3Client(s3_uri_, access_key_id_, secret_access_key_, s3_settings, context_);
-    if (context_->hasQueryContext())
-        blob_storage_log.query_id = context_->getQueryContext()->getCurrentQueryId();
+    if (auto blob_storage_system_log = context_->getBlobStorageLog())
+    {
+        blob_storage_log = std::make_shared<BlobStorageLogWriter>(blob_storage_system_log);
+        if (context_->hasQueryContext())
+            blob_storage_log->query_id = context_->getQueryContext()->getCurrentQueryId();
+    }
 }
 
 void BackupWriterS3::copyFileFromDisk(const String & path_in_backup, DiskPtr src_disk, const String & src_path,
@@ -308,10 +313,13 @@ void BackupWriterS3::removeFile(const String & file_name)
 
     auto outcome = client->DeleteObject(request);
 
-    blob_storage_log.addEvent(
-        BlobStorageLogElement::EventType::Delete,
-        s3_uri.bucket, key, {}, 0,
-        outcome.IsSuccess() ? nullptr : &outcome.GetError());
+    if (blob_storage_log)
+    {
+        blob_storage_log->addEvent(
+            BlobStorageLogElement::EventType::Delete,
+            s3_uri.bucket, key, /* local_path */ "", /* data_size */ 0,
+            outcome.IsSuccess() ? nullptr : &outcome.GetError());
+    }
 
     if (!outcome.IsSuccess() && !isNotFoundError(outcome.GetError().GetErrorType()))
         throw S3Exception(outcome.GetError().GetMessage(), outcome.GetError().GetErrorType());
@@ -372,10 +380,14 @@ void BackupWriterS3::removeFilesBatch(const Strings & file_names)
 
         auto outcome = client->DeleteObjects(request);
 
-        const auto * outcome_error = outcome.IsSuccess() ? nullptr : &outcome.GetError();
-        auto time_now = std::chrono::system_clock::now();
-        for (const auto & obj : current_chunk)
-            blob_storage_log.addEvent(BlobStorageLogElement::EventType::Delete, s3_uri.bucket, obj.GetKey(), {}, 0, outcome_error, time_now);
+        if (blob_storage_log)
+        {
+            const auto * outcome_error = outcome.IsSuccess() ? nullptr : &outcome.GetError();
+            auto time_now = std::chrono::system_clock::now();
+            for (const auto & obj : current_chunk)
+                blob_storage_log->addEvent(BlobStorageLogElement::EventType::Delete, s3_uri.bucket, obj.GetKey(),
+                                          /* local_path */ "", /* data_size */ 0, outcome_error, time_now);
+        }
 
         if (!outcome.IsSuccess() && !isNotFoundError(outcome.GetError().GetErrorType()))
             throw S3Exception(outcome.GetError().GetMessage(), outcome.GetError().GetErrorType());

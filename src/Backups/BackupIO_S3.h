@@ -33,7 +33,7 @@ private:
     S3Settings s3_settings;
     std::shared_ptr<S3::Client> client;
 
-    BlobStorageLogWriter blob_storage_log;
+    BlobStorageLogWriterPtr blob_storage_log;
 };
 
 
@@ -64,7 +64,7 @@ private:
     std::shared_ptr<S3::Client> client;
     std::optional<bool> supports_batch_delete;
 
-    BlobStorageLogWriter blob_storage_log;
+    BlobStorageLogWriterPtr blob_storage_log;
 };
 
 }

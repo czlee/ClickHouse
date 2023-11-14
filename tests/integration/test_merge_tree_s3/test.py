@@ -201,7 +201,7 @@ def test_simple_insert_select(
             countIf(local_path != '') == total_events,
             sum(data_size) > 0
         FROM system.blob_storage_log
-        WHERE query_id = '{insert_query_id}' AND error_msg == ''
+        WHERE query_id = '{insert_query_id}' AND error == ''
         """
     )
     assert result == "1\t1\t1\t1\t1\n", blob_storage_log
@@ -306,7 +306,7 @@ def test_alter_table_columns(cluster, node_name):
         )
         deleted_in_log = set(
             node.query(
-                f"SELECT remote_path FROM system.blob_storage_log WHERE error_msg == '' AND event_type == 'Delete'"
+                f"SELECT remote_path FROM system.blob_storage_log WHERE error == '' AND event_type == 'Delete'"
             )
             .strip()
             .split()
@@ -867,7 +867,7 @@ def test_merge_canceled_by_s3_errors(cluster, broken_s3, node_name, storage_poli
 
     node.query("SYSTEM FLUSH LOGS")
     error_count_in_blob_log = node.query(
-        f"SELECT count() FROM system.blob_storage_log WHERE query_id like '{table_uuid}::%' AND error_msg like '%mock s3 injected error%'"
+        f"SELECT count() FROM system.blob_storage_log WHERE query_id like '{table_uuid}::%' AND error like '%mock s3 injected error%'"
     ).strip()
     assert int(error_count_in_blob_log) > 0, node.query(
         f"SELECT * FROM system.blob_storage_log WHERE query_id like '{table_uuid}::%' FORMAT PrettyCompactMonoBlock"

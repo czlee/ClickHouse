@@ -100,8 +100,6 @@ private:
     void createOrCheckMetadata(const StorageInMemoryMetadata & storage_metadata);
     void checkTableStructure(const String & zookeeper_prefix, const StorageInMemoryMetadata & storage_metadata);
     Configuration updateConfigurationAndGetCopy(ContextPtr local_context);
-
-    BlobStorageLogWriter getBlobStorageLog();
 };
 
 }

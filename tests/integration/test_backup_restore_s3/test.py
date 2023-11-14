@@ -141,7 +141,7 @@ def check_system_tables(backup_query_id=None):
 
     if backup_query_id is not None:
         blob_storage_log = node.query(
-            f"SELECT count() FROM system.blob_storage_log WHERE query_id = '{backup_query_id}' AND error_msg = '' AND event_type = 'Upload'"
+            f"SELECT count() FROM system.blob_storage_log WHERE query_id = '{backup_query_id}' AND error = '' AND event_type = 'Upload'"
         ).strip()
         assert int(blob_storage_log) >= 1, node.query(
             "SELECT * FROM system.blob_storage_log FORMAT PrettyCompactMonoBlock"
@@ -217,7 +217,7 @@ def test_backup_to_s3_multipart():
     backup_query_id = backup_events["query_id"]
     blob_storage_log = node.query(
         f"SELECT countIf(event_type == 'MultiPartUploadCreate') * countIf(event_type == 'MultiPartUploadComplete') * countIf(event_type == 'MultiPartUploadWrite') "
-        f"FROM system.blob_storage_log WHERE query_id = '{backup_query_id}' AND error_msg = ''"
+        f"FROM system.blob_storage_log WHERE query_id = '{backup_query_id}' AND error = ''"
     ).strip()
     assert int(blob_storage_log) >= 1, node.query(
         "SELECT * FROM system.blob_storage_log FORMAT PrettyCompactMonoBlock"

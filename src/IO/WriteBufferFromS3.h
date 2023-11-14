@@ -37,7 +37,7 @@ public:
         const String & key_,
         size_t buf_size_,
         const S3Settings::RequestSettings & request_settings_,
-        BlobStorageLogWriter blob_log_,
+        BlobStorageLogWriterPtr blob_log_,
         std::optional<std::map<String, String>> object_metadata_ = std::nullopt,
         ThreadPoolCallbackRunner<void> schedule_ = {},
         const WriteSettings & write_settings_ = {});
@@ -124,7 +124,7 @@ private:
     class TaskTracker;
     std::unique_ptr<TaskTracker> task_tracker;
 
-    BlobStorageLogWriter blob_log;
+    BlobStorageLogWriterPtr blob_log;
 };
 
 }

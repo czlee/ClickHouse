@@ -25,13 +25,14 @@ struct BlobStorageLogElement
 
     String query_id;
     UInt64 thread_id = 0;
+    String thread_name;
 
     String disk_name;
     String bucket;
     String remote_path;
     String local_path;
 
-    UInt32 data_size;
+    size_t data_size;
 
     Int32 error_code = -1; /// negative if no error
     String error_msg;
