@@ -195,11 +195,11 @@ def test_simple_insert_select(
 
     result = node.query(
         f"""SELECT
-            (countIf(event_type == 'Upload' OR event_type == 'MultiPartUploadWrite') as total_events) > 0,
-            countIf(bucket == 'root') == total_events,
-            countIf(remote_path != '') == total_events,
-            countIf(local_path != '') == total_events,
-            sum(data_size) > 0
+            (countIf( (event_type == 'Upload' OR event_type == 'MultiPartUploadWrite') as event_match) as total_events) > 0,
+            countIf(event_match AND bucket == 'root') == total_events,
+            countIf(event_match AND remote_path != '') == total_events,
+            countIf(event_match AND local_path != '') == total_events,
+            sumIf(data_size, event_match) > 0
         FROM system.blob_storage_log
         WHERE query_id = '{insert_query_id}' AND error == ''
         """
