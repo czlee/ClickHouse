@@ -25,7 +25,7 @@ Columns:
 - `remote_path` ([String](../../sql-reference/data-types/string.md)) — Path to the remote resource.
 - `local_path` ([String](../../sql-reference/data-types/string.md)) — Path to the metadata file on the local system, which references the remote resource.
 - `data_size` ([UInt32](../../sql-reference/data-types/int-uint.md#uint-ranges)) — Size of the data involved in the upload event.
-- `error_msg` ([String](../../sql-reference/data-types/string.md)) — Error message associated with the event, if any.
+- `error` ([String](../../sql-reference/data-types/string.md)) — Error message associated with the event, if any.
 
 **Example**
 
@@ -49,7 +49,7 @@ bucket:                  bucket1
 remote_path:             rrr/kxo/tbnqtrghgtnxkzgtcrlutwuslgawe
 local_path:              store/654/6549e8b3-d753-4447-8047-d462df6e6dbe/tmp_insert_all_1_1_0/checksums.txt
 data_size:               259
-error_msg:
+error:
 ```
 
 In this example, upload operation was associated with the `INSERT` query with ID `7afe0450-504d-4e4b-9a80-cd9826047972`. The local metadata file `store/654/6549e8b3-d753-4447-8047-d462df6e6dbe/tmp_insert_all_1_1_0/checksums.txt` refers to remote path `rrr/kxo/tbnqtrghgtnxkzgtcrlutwuslgawe` in bucket `bucket1` on disk `disk_s3`, with a size of 259 bytes.

@@ -82,8 +82,8 @@ void BlobStorageLogElement::appendToBlock(MutableColumns & columns) const
     assert(coulumn_names.at(i) == "data_size");
     columns[i++]->insert(data_size);
 
-    assert(coulumn_names.at(i) == "error_msg");
-    columns[i++]->insert(error_msg);
+    assert(coulumn_names.at(i) == "error");
+    columns[i++]->insert(error_message);
 
     assert(i == coulumn_names.size() && columns.size() == coulumn_names.size());
 }

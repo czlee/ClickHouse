@@ -35,7 +35,7 @@ struct BlobStorageLogElement
     size_t data_size;
 
     Int32 error_code = -1; /// negative if no error
-    String error_msg;
+    String error_message;
 
     using EvenTime = std::chrono::time_point<std::chrono::system_clock>;
     EvenTime event_time;

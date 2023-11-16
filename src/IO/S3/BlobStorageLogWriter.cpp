@@ -42,7 +42,7 @@ void BlobStorageLogWriter::addEvent(
     if (error)
     {
         element.error_code = static_cast<Int32>(error->GetErrorType());
-        element.error_msg = error->GetMessage();
+        element.error_message = error->GetMessage();
     }
 
     element.event_time = time_now;
